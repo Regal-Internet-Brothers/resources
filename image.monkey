@@ -212,14 +212,14 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 			Endif
 		Endif
 		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
-		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
 			Entry.Add(Callback)
 		Endif
+		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -246,14 +246,14 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 			Endif
 		Endif
 		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
-		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
 			Entry.Add(Callback)
 		Endif
+		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -335,6 +335,10 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		#End
 		
 		Return Super.DeallocateEntry(Entry.Release(), False)
+	End
+	
+	Method CanDeallocate:Bool(Entry:EntryType)
+		Return Super.CanDeallocate(Entry) And Entry.CanDeallocate()
 	End
 	
 	' Properties:
@@ -474,6 +478,48 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	End
 	
 	' Methods:
+	
+	' This is effectively the same as the 'LoadSegment' command.
+	Method LoadAutomaticSegment:ImageEntry(Path:String, X:Int=0, Y:Int=0, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, FrameWidth:Int=0, FrameHeight:Int=0, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+		Return LoadSegment(Path, X, Y, FrameWidth, FrameHeight, FrameCount, Flags, Callback, AddInternally, CareAboutInternalAdd)
+	End
+	
+	' This command can be used to load a specific portion of an 'Image' object's surface.
+	' Like the standard 'Load' commands, this will seamlessly work with the internal "atlas" map.
+	Method LoadSegment:ImageEntry(Path:String, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+		For Local I:= Eachin Container ' Images ' Self
+			' Ensure that the object in question is the equal, and it's located at the same place on the atlas:
+			If (I.Equals(Path, FrameCount, Flags, FrameWidth, FrameHeight) And I.CheckPosition(X, Y)) Then
+				I.ExecuteCallbackSelectively(Callback)
+			
+				Return I
+			Endif
+		Next
+		
+		' If we couldn't find a suitable entry, generate one.
+		Local Entry:= New AtlasImageEntry(Path, X, Y, FrameWidth, FrameHeight, FrameCount, Flags, AtlasImageEntry.Default_IsLinked, True)
+		
+		If (AddInternally) Then
+			If (Not Add(Entry) And CareAboutInternalAdd) Then
+				DeallocateEntry(Entry)
+				
+				' Return a 'Null' reference to the user.
+				Return Null
+			Endif
+		Endif
+		
+		' Check if we have a call-back to work with:
+		If (Callback <> Null) Then
+			' Add the call-back specified to the newly generated entry.
+			Entry.Add(Callback)
+		Endif
+		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
+		
+		' Return the newly built entry.
+		Return Entry
+	End
 	
 	#Rem
 		This command will only provide an "atlas"
@@ -619,38 +665,30 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	Method AssignReference:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
 		' Check if we're loading from the disk:
 		#If RESOURCES_SAFE ' And CONFIG <> "debug"
-		If (ShouldLoadFromDisk And Atlas <> Null) Then
+			If (ShouldLoadFromDisk And Atlas <> Null) Then
 		#Else
-		If (ShouldLoadFromDisk) Then
+			If (ShouldLoadFromDisk) Then
 		#End
-			#If RESOURCES_SAFE And CONFIG = "debug"
-				If (Entry.FrameCount <= 0) Then
-					DebugLog("Invalid frame-count detected.")
+				#If RESOURCES_SAFE And CONFIG = "debug"
+					If (Entry.FrameCount <= 0) Then
+						DebugLog("Invalid frame-count detected.")
+						
+						DebugStop()
+					Endif
 					
-					DebugStop()
-				Endif
+					If (Entry.FrameWidth <= 0 And Entry.FrameHeight > 0 Or Entry.FrameWidth > 0 And Entry.FrameHeight <= 0) Then
+						DebugLog("Invalid frame-size detected.")
+						
+						DebugStop()
+					Endif
+				#End
 				
-				If (Entry.FrameWidth <= 0 And Entry.FrameHeight > 0 Or Entry.FrameWidth > 0 And Entry.FrameHeight <= 0) Then
-					DebugLog("Invalid frame-size detected.")
-					
-					DebugStop()
+				Entry.GrabFrom(Atlas, X, Y)
+			Else
+				If (CallUpOnFailure) Then
+					Super.BuildEntry(Entry, False)
 				Endif
-			#End
-			
-			Local FrameWidth:= Entry.FrameWidth
-			Local FrameHeight:= Entry.FrameHeight
-			
-			If (FrameWidth = 0 And FrameHeight = 0) Then
-				FrameWidth = Atlas.Width() / Entry.FrameCount
-				FrameHeight = Atlas.Height()
 			Endif
-			
-			Entry.SetReference(Atlas.GrabImage(X, Y, FrameWidth, FrameHeight, Entry.FrameCount, Entry.Flags))
-		Else
-			If (CallUpOnFailure) Then
-				Super.BuildEntry(Entry, False)
-			Endif
-		Endif
 		
 		Return Entry.Reference
 	End
@@ -743,9 +781,9 @@ End
 #End
 
 #If RESOURCES_ASYNC_ENABLED
-Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager, IOnLoadImageComplete ' Final
+Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager, IOnLoadImageComplete
 #Else
-Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager ' Final
+Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager
 #End
 	' Constant variable(s):
 	' Nothing so far.
@@ -767,7 +805,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	
 	Method New(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
 		' Call the main implementation.
-		Construct(Path, FrameWidth, FrameCount, Flags, IsLinked)
+		Construct(Path, FrameWidth, FrameHeight, FrameCount, Flags, IsLinked)
 	End
 	
 	Method New(Entry:ImageEntry, CopyReferenceData:Bool=Default_CopyReferenceData, CopyCallbackContainer:Bool=Default_CopyCallbackContainer)
@@ -816,8 +854,18 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		
 		Self.Flags = Flags
 		
+		Construct_Extensions()
+		
 		' Return this object so it may be pooled.
 		Return Self
+	End
+	
+	' This constructor may be used by inheriting classes to
+	' restore any extra information back to its default state.
+	Method Construct_Extensions:Void()
+		' Nothing so far.
+		
+		Return
 	End
 	
 	' Constructor(s) (Private):
@@ -964,6 +1012,26 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Return Super.GetReference()
 	End
 	
+	Method GrabFrom:Void(Atlas:Image, X:Int=0, Y:Int=0)
+		Local FrameWidth:Int
+		Local FrameHeight:Int
+		
+		If (Self.FrameWidth = 0 And Self.FrameHeight = 0) Then
+			FrameWidth = (Atlas.Width()-X) / Self.FrameCount
+			FrameHeight = (Atlas.Height()-Y)
+		Endif
+		
+		SetReference(Atlas.GrabImage(X, Y, FrameWidth, FrameHeight, FrameCount, Flags))
+		
+		Return
+	End
+	
+	' This is used for "atlas" optimization purposes.
+	' By default, 'ImageEntry' objects do not have positions.
+	Method CheckPosition:Bool(X:Int=0, Y:Int=0)
+		Return ((X = 0) And (Y = 0))
+	End
+	
 	' Call-backs:
 	#If RESOURCES_ASYNC_ENABLED
 		Method OnLoadImageComplete:Void(IncomingReference:Image, Path:String="", Source:IAsyncEventSource=Null)
@@ -1026,7 +1094,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	End
 	
 	Method Equals:Bool(Input_FrameWidth:Int=0, Input_FrameHeight:Int=0, Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags)
-		Return (FrameWidth = Input_FrameWidth And FrameHeight = Input_FrameHeight And FrameCount = Input_FrameCount And Flags = Input_Flags)
+		Return Equals("", Input_FrameCount, Input_Flags, Input_FrameWidth, Input_FrameHeight) ' (FrameWidth = Input_FrameWidth And FrameHeight = Input_FrameHeight And FrameCount = Input_FrameCount And Flags = Input_Flags)
 	End
 	
 	' Methods (Private):
@@ -1037,6 +1105,10 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	Public
 	
 	' Properties:
+	Method CanDeallocate:Bool() Property
+		Return True
+	End
+	
 	Method ShouldLoadFromDisk:Bool() Property
 		Return (Path.Length() > 0)
 	End
@@ -1062,6 +1134,123 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	#End
 	
 	Public
+End
+
+#Rem
+	DESCRIPTION:
+		* 'AtlasImageEntry' objects are 'ImageEntry' objects
+		which specify where in an "atlas" the underlying 'Image' reference begins.
+	NOTES:
+		* Objects made from this class are not normally pooled by 'ImageManager' objects.
+		This can be changed manually when constructing one, however, re-use of
+		this object will not be done as an 'AtlasImageEntry'.
+		
+		There is no plan to create a specific 'ImageManager'
+		class that deals with this class directly.
+		
+		The 'AtlasImageManager' class uses this class, but it does not
+		distinguish between this class and the 'ImageEntry' class.
+#End
+
+Class AtlasImageEntry Extends ImageEntry
+	' Constant variable(s):
+	
+	' Defaults:
+	Const Default_CanBePooled:Bool = False
+	
+	' Constructor(s):
+	Method New(Path:String="", FrameCount:Int=1, Flags:Int=Image.DefaultFlags, X:Int=0, Y:Int=0, IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
+		' Call the super-class's implementation.
+		Super.New(Path, FrameCount, Flags, IsLinked)
+		
+		Self.X = X
+		Self.Y = Y
+		
+		Self.CanBePooled = CanBePooled
+	End
+	
+	Method New(Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, X:Int=0, Y:Int=0, Path:String="", IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
+		' Call the super-class's implementation.
+		Super.New(Width, Height, FrameCount, Flags, Path, IsLinked)
+		
+		Self.X = X
+		Self.Y = Y
+		
+		Self.CanBePooled = CanBePooled
+	End
+	
+	Method New(Path:String, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
+		' Call the super-class's implementation.
+		Super.New(Path, FrameWidth, FrameHeight, FrameCount, Flags, IsLinked)
+		
+		Self.X = X
+		Self.Y = Y
+		
+		Self.CanBePooled = CanBePooled
+	End
+	
+	Method New(Entry:ImageEntry, CopyReferenceData:Bool=Default_CopyReferenceData, CopyCallbackContainer:Bool=Default_CopyCallbackContainer, CanBePooled:Bool=Default_CanBePooled)
+		' Call the super-class's implementation.
+		Super.New(Entry, CopyReferenceData, CopyCallbackContainer)
+		
+		Self.X = 0
+		Self.Y = 0
+		
+		Self.CanBePooled = CanBePooled
+	End
+	
+	Method New(Entry:AtlasImageEntry, CopyReferenceData:Bool=Default_CopyReferenceData, CopyCallbackContainer:Bool=Default_CopyCallbackContainer, CanBePooled:Bool=Default_CanBePooled)
+		' Call the super-class's implementation.
+		Super.New(Entry, CopyReferenceData, CopyCallbackContainer)
+		
+		Self.X = Entry.X
+		Self.Y = Entry.Y
+		
+		Self.CanBePooled = CanBePooled
+	End
+	
+	Method Construct_Extensions:Void()
+		'#If RESOURCES_SAFE
+		Self.X = 0
+		Self.Y = 0
+		'#End
+		
+		' Call the super-class's implementation.
+		Super.Construct_Extensions()
+		
+		Return
+	End
+	
+	' Destructor(s):
+	Method Free:ImageEntry(DestroyReferenceData:Bool=Default_DestroyReferenceData)
+		Self.X = 0
+		Self.Y = 0
+		
+		' Call the super-class's implementation.
+		Return Super.Free(DestroyReferenceData)
+	End
+	
+	' Methods:
+	Method GrabFrom:Void(Atlas:Image, X:Int=0, Y:Int=0)
+		Super.GrabFrom(Atlas, Self.X+X, Self.Y+Y)
+		
+		Return
+	End
+	
+	Method CheckPosition:Bool(X:Int=0, Y:Int=0)
+		Return (Self.X = X) And (Self.Y = Y)
+	End
+	
+	' Properties:
+	Method CanDeallocate:Bool() Property
+		Return Self.CanBePooled
+	End
+	
+	' Fields:
+	Field X:Int, Y:Int
+	
+	' Booleans / Flags:
+	Field CanBePooled:Bool
 End
 
 ' Exception classes:

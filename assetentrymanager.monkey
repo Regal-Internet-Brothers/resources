@@ -260,15 +260,13 @@ Class AssetEntryManager<EntryType> Extends AssetManager<EntryType> Abstract
 	' It is recommended that you don't destruct shared/linked entries, however.
 	' This implementation will take care of that for you.
 	Method CanDeallocate:Bool(Entry:EntryType)
-		'#If RESOURCES_SAFE
-			If (Entry.IsLinked) Then
-				#If CONFIG = "debug"
-					DebugLog("Attempted to deallocate shared entry-object.")
-				#End
-				
-				Return False
-			Endif
-		'#End
+		If (Entry.IsLinked) Then
+			#If CONFIG = "debug"
+				DebugLog("Attempted to deallocate shared entry-object.")
+			#End
+			
+			Return False
+		Endif
 		
 		' Return the default response.
 		Return True

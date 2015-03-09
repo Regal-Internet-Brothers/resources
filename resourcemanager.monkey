@@ -19,19 +19,27 @@ Class ResourceManager
 		GenerateSystems()
 	End
 	
-	Method New(Images:ImageManager)
-		Self.Images = Images
-	End
+	#If Not RESOURCES_RESOURCEMANAGER_PREFER_ATLASES
+		Method New(Images:ImageManager)
+	#Else
+		Method New(Images:AtlasImageManager)
+	#End
+			Self.Images = Images
+		End
 	
 	#If RESOURCES_SOUND_IMPLEMENTED
 		Method New(Sounds:SoundManager)
 			Self.Sounds = Sounds
 		End
 		
-		Method New(Images:ImageManager, Sounds:SoundManager)
-			Self.Images = Images
-			Self.Sounds = Sounds
-		End
+		#If Not RESOURCES_RESOURCEMANAGER_PREFER_ATLASES
+			Method New(Images:ImageManager, Sounds:SoundManager)
+		#Else
+			Method New(Images:AtlasImageManager, Sounds:SoundManager)
+		#End
+				Self.Images = Images
+				Self.Sounds = Sounds
+			End
 	#End
 	
 	Method GenerateSystems:Void()
@@ -64,7 +72,11 @@ Class ResourceManager
 	End
 	
 	' Fields:
-	Field Images:ImageManager
+	#If Not RESOURCES_RESOURCEMANAGER_PREFER_ATLASES
+		Field Images:ImageManager
+	#Else
+		Field Images:AtlasImageManager
+	#End
 	
 	#If RESOURCES_SOUND_IMPLEMENTED
 		Field Sounds:SoundManager
