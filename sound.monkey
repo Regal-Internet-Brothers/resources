@@ -124,14 +124,14 @@ Class SoundManager Extends AssetEntryManager<SoundEntry> ' Final
 			Endif
 		Endif
 		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
-		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
 			Entry.Add(Callback)
 		Endif
+		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
