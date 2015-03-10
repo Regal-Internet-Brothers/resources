@@ -1112,6 +1112,12 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	Method ShouldLoadFromDisk:Bool() Property
 		Return (Path.Length() > 0)
 	End
+	
+	#If RESOURCES_SAFE
+		Method IsReady:Bool() Property
+			Return Super.IsReady() And Not WaitingForAsynchronousReference
+		End
+	#End
 
 	' Fields (Public):
 	Field Path:String

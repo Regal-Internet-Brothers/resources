@@ -410,6 +410,13 @@ Class SoundEntry Extends AssetEntry<Sound, SoundEntryRecipient> ' Final
 		Return False
 	End
 	
+	' Properties:
+	#If RESOURCES_SAFE
+		Method IsReady:Bool() Property
+			Return Super.IsReady() And Not WaitingForAsynchronousReference
+		End
+	#End
+	
 	' Fields (Public):
 	Field Path:String
 	
