@@ -318,10 +318,12 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 			Return
 		Endif
 		
-		If (Not Contains(Callback) And IsReady) Then
-			ExecuteCallback(Callback)
-		Else
-			Add(Callback)
+		If (Not Contains(Callback)) Then
+			If (IsReady) Then
+				ExecuteCallback(Callback)
+			Else
+				Add(Callback)
+			Endif
 		Endif
 		
 		Return
