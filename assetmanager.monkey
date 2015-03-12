@@ -246,6 +246,10 @@ Class AssetManager<AssetType> Implements AssetManager_DebugInterface ' Abstract
 	End
 	
 	Method Contains:Bool(A:AssetType)
+		If (Container = Null) Then
+			Return False
+		Endif
+		
 		#If RESOURCES_ASSETMANAGER_STANDARD_CONTAINER
 			Return Container.Contains(A)
 		#Else

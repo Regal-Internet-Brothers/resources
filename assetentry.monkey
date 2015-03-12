@@ -423,6 +423,15 @@ End
 
 Class ManagedAssetEntry<ReferenceType, ReferenceGenerator, CallbackType> Extends AssetEntry<ReferenceType, CallbackType> Abstract
 	' Constructor(s):
+	Method New(CreateContainer:Bool=True)
+		' Call the super-class's implementation.
+		Super.New(CreateContainer)
+	End
+	
+	Method New(Assets:AssetContainer<AssetType>, CopyData:Bool=True)
+		' Call the super-class's implementation.
+		Super.New(Assets, CopyData)
+	End
 	
 	' Methods:
 	Method ManagedGenerateReference:ReferenceType(Manager:ReferenceGenerator, DiscardExistingData:Bool=Default_DestroyReferenceData) Abstract

@@ -14,7 +14,7 @@ Public
 #End
 
 #RESOURCES_SOUND_IMPLEMENTED = True
-#RESOURCES_SOUND_SYNCHRONOUS_BY_DEFAULT = True
+#RESOURCES_SOUND_SYNCHRONOUS_BY_DEFAULT = True ' False
 
 ' Imports (Internal):
 Import resources
@@ -124,14 +124,15 @@ Class SoundManager Extends AssetEntryManager<SoundEntry> ' Final
 			Endif
 		Endif
 		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
+		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
 			Entry.Add(Callback)
+			Entry.ExecuteCallbackSelectively(Callback)
 		Endif
-		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -195,10 +196,16 @@ Class SoundEntry Extends AssetEntry<Sound, SoundEntryRecipient> ' Final
 	
 	' These constructors exhibit the same behavior as their 'Construct' counterparts:
 	Method New(Path:String="", IsLinked:Bool=Default_IsLinked)
+		' Call the super-class's implementation.
+		Super.New(False)
+		
 		Construct(Path, IsLinked)
 	End
 	
 	Method New(Entry:SoundEntry, CopyReferenceData:Bool=Default_CopyReferenceData, CopyCallbackContainer:Bool=Default_CopyCallbackContainer)
+		' Call the super-class's implementation.
+		Super.New(False)
+		
 		' Call the main implementation.
 		Construct(Entry, CopyReferenceData, CopyCallbackContainer)
 	End

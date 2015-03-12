@@ -212,14 +212,15 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 			Endif
 		Endif
 		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
+		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
-			Entry.Add(Callback)
+			'Entry.Add(Callback)
+			Entry.ExecuteCallbackSelectively(Callback)
 		Endif
-		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -246,14 +247,15 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 			Endif
 		Endif
 		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
+		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
-			Entry.Add(Callback)
+			'Entry.Add(Callback)
+			Entry.ExecuteCallbackSelectively(Callback)
 		Endif
-		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -280,14 +282,15 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 			Endif
 		Endif
 		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
+		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
-			Entry.Add(Callback)
+			'Entry.Add(Callback)
+			Entry.ExecuteCallbackSelectively(Callback)
 		Endif
-		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -377,46 +380,23 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	' Constructor(s):
 	
 	' Calling up to the super-class's implementation is done through the standard 'ConstructManager' constructor:
-	Method New(CreateContainer:Bool=True, BuildAtlasMap:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
+	Method New(CreateContainer:Bool=True, BuildAtlasMap:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size)
+		' Call the super-class's implementation.
+		Super.New(CreateContainer, EntryPoolSize)
+		
 		' Call the main implementation.
-		ConstructAtlasImageManager(CreateContainer, BuildAtlasMap, False, EntryPoolSize, CallUpToSuperClass)
+		ConstructAtlasImageManager(BuildAtlasMap)
 	End
 	
-	Method New(Assets:AssetContainer<ImageEntry>, BuildAtlasMap:Bool=True, CopyData:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
+	Method New(Assets:AssetContainer<ImageEntry>, BuildAtlasMap:Bool=True, CopyData:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size)
+		' Call the super-class's implementation.
+		Super.New(Assets, CopyData, EntryPoolSize)
+		
 		' Call the main implementation.
-		ConstructAtlasImageManager(Assets, BuildAtlasMap, False, CopyData, EntryPoolSize, CallUpToSuperClass)
+		ConstructAtlasImageManager(BuildAtlasMap)
 	End
 	
-	#Rem
-		This should be used for construction of this object through pools,
-		or similar means. This constructor can be configured to not "call up"
-		to 'ConstructManager', however, that is not recommended.
-		
-		Such behavior can be achieved through the 'CallUpToSuperClass' argument.
-	#End
-	
-	Method ConstructAtlasImageManager:AtlasImageManager(CreateContainer:Bool=True, BuildAtlasMap:Bool=True, CareAboutPreviousAtlasMap:Bool=False, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
-		If (CallUpToSuperClass) Then
-			ConstructEntryManager(CreateContainer, EntryPoolSize)
-		Endif
-		
-		If (BuildAtlasMap) Then
-			If (CareAboutPreviousAtlasMap) Then
-				EnsureAtlasMap()
-			Else
-				CreateAtlasMap()
-			Endif
-		Endif
-		
-		' Return this object, so it may be pooled.
-		Return Self
-	End
-	
-	Method ConstructAtlasImageManager:AtlasImageManager(Assets:AssetContainer<ImageEntry>, BuildAtlasMap:Bool=True, CareAboutPreviousAtlasMap:Bool=False, CopyData:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
-		If (CallUpToSuperClass) Then
-			ConstructEntryManager(Assets, CopyData, EntryPoolSize)
-		Endif
-		
+	Method ConstructAtlasImageManager:AtlasImageManager(BuildAtlasMap:Bool=True, CareAboutPreviousAtlasMap:Bool=False)
 		If (BuildAtlasMap) Then
 			If (CareAboutPreviousAtlasMap) Then
 				EnsureAtlasMap()
@@ -508,14 +488,15 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 			Endif
 		Endif
 		
+		' Build the newly generated entry.
+		BuildEntry(Entry)
+		
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
-			Entry.Add(Callback)
+			'Entry.Add(Callback)
+			Entry.ExecuteCallbackSelectively(Callback)
 		Endif
-		
-		' Build the newly generated entry.
-		BuildEntry(Entry)
 		
 		' Return the newly built entry.
 		Return Entry
@@ -804,20 +785,32 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	
 	' These constructors exhibit the same behavior as their 'Construct' counterparts:
 	Method New(Path:String="", FrameCount:Int=1, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
+		' Call the super-class's implementation.
+		Super.New(False)
+		
 		Construct(Path, FrameCount, Flags, IsLinked)
 	End
 	
 	Method New(Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Path:String="", IsLinked:Bool=Default_IsLinked)
+		' Call the super-class's implementation.
+		Super.New(False)
+		
 		' Call the main implementation.
 		Construct(Width, Height, FrameCount, Flags, Path, IsLinked)
 	End
 	
 	Method New(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
+		' Call the super-class's implementation.
+		Super.New(False)
+		
 		' Call the main implementation.
 		Construct(Path, FrameWidth, FrameHeight, FrameCount, Flags, IsLinked)
 	End
 	
 	Method New(Entry:ImageEntry, CopyReferenceData:Bool=Default_CopyReferenceData, CopyCallbackContainer:Bool=Default_CopyCallbackContainer)
+		' Call the super-class's implementation.
+		Super.New(False)
+		
 		' Call the main implementation.
 		Construct(Entry, CopyReferenceData, CopyCallbackContainer)
 	End
@@ -1142,11 +1135,11 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	End
 	
 	Method Equals:Bool(Input_Path:String, Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
-		Return ((Path = Input_Path) And Equals(Input_FrameWidth, Input_FrameHeight, Input_FrameCount, Input_Flags))
+		Return ((Path = Input_Path) And (FrameWidth = Input_FrameWidth And FrameHeight = Input_FrameHeight And FrameCount = Input_FrameCount And Flags = Input_Flags)) ' Equals(Input_FrameWidth, Input_FrameHeight, Input_FrameCount, Input_Flags)
 	End
 	
 	Method Equals:Bool(Input_FrameWidth:Int=0, Input_FrameHeight:Int=0, Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags)
-		Return Equals("", Input_FrameCount, Input_Flags, Input_FrameWidth, Input_FrameHeight) ' (FrameWidth = Input_FrameWidth And FrameHeight = Input_FrameHeight And FrameCount = Input_FrameCount And Flags = Input_Flags)
+		Return Equals("", Input_FrameCount, Input_Flags, Input_FrameWidth, Input_FrameHeight)
 	End
 	
 	' Methods (Private):

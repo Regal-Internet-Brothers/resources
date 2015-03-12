@@ -41,39 +41,19 @@ Class AssetEntryManager<EntryType> Extends AssetManager<EntryType> Abstract
 	Const Default_CallUpToSuperClass:Bool = True
 	
 	' Constructor(s) (Public):
-	Method New(CreateContainer:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
-		' Call the main implementation.
-		ConstructEntryManager(CreateContainer, EntryPoolSize, CallUpToSuperClass)
+	Method New(CreateContainer:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size)
+		' Call the super-class's implementation.
+		Super.New(CreateContainer)
+		
+		Self.EntryPool = New Pool<EntryType>(EntryPoolSize)
 	End
 	
 	' Please see the 'AddAssets' method's documentation for details on entry mutation.
-	Method New(Assets:AssetContainer<EntryType>, CopyData:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
-		' Call the main implementation.
-		ConstructEntryManager(Assets, CopyData, EntryPoolSize, CallUpToSuperClass)
-	End
-	
-	' This routine does not call the 'ConstructManager' constructor.
-	Method ConstructEntryManager:AssetEntryManager<EntryType>(CreateContainer:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
-		If (CallUpToSuperClass) Then
-			ConstructManager(CreateContainer)
-		Endif
+	Method New(Assets:AssetContainer<EntryType>, CopyData:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size)
+		' Call the super-class's implementation.
+		Super.New(Assets, CopyData)
 		
-		Return ConstructEntryManager(EntryPoolSize)
-	End
-	
-	Method ConstructEntryManager:AssetEntryManager<EntryType>(Assets:AssetContainer<EntryType>, CopyData:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size, CallUpToSuperClass:Bool=Default_CallUpToSuperClass)
-		If (CallUpToSuperClass) Then
-			ConstructManager(Assets, CopyData)
-		Endif
-		
-		Return ConstructEntryManager(EntryPoolSize)
-	End
-	
-	Method ConstructEntryManager:AssetEntryManager<EntryType>(EntryPoolSize:Int)
 		Self.EntryPool = New Pool<EntryType>(EntryPoolSize)
-		
-		' Return this object, so it may be pooled.
-		Return Self
 	End
 	
 	' Destructor(s):
