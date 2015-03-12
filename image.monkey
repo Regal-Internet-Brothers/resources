@@ -728,6 +728,15 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	' Call-backs:
 	#If RESOURCES_ASYNC_ENABLED
 		Method OnLoadImageComplete:Void(IncomingReference:Image, Path:String, Source:IAsyncEventSource=Null)
+			' Check for errors:
+			#If RESOURCES_SAFE
+				If (IncomingReference = Null) Then
+					Return
+				Endif
+			#End
+			
+			SetAtlas(IncomingReference, Path)
+			
 			#If RESOURCES_SAFE And CONFIG = "debug"
 				Local EntryFound:Bool = False
 			#End
@@ -1026,6 +1035,49 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Return
 	End
 	
+	#Rem
+		These methods act as "grab" routines for the internal reference.
+		
+		These work as a standard "share operations", meaning
+		image-data can't be explicitly discarded in the future.
+		
+		An 'Image' object will only be produced if the internal
+		reference exists, and sharing can be done successfully.
+		
+		These methods do not make a formal calls to 'GetReference',
+		meaning they are not implicitly capable of throwing access exceptions.
+		
+		The "grabbing" behavior of these methods is described by Mojo.
+		Please keep in mind Mojo's behavior regarding multi-frame "grabbing".
+	#End
+	
+	Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags)
+		' Check for errors:
+		
+		' Check if we have an internal reference to "grab" from:
+		If (Self.Reference = Null) Then
+			Return Null
+		Endif
+		
+		#If RESOURCES_SAFE
+			If (Self.FrameCount > 1) Then
+				Return Null
+			Endif
+		#End
+		
+		' Make sure we can "share" the internal reference:
+		If (Not Share()) Then
+			Return Null
+		Endif
+		
+		' Use Mojo to "grab" from the internal reference.
+		Return Self.Reference.GrabImage(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)
+	End
+	
+	Method Grab:Image(X:Int=0, Y:Int=0)
+		Return Grab(X, Y, Self.FrameWidth, Self.FrameHeight, Self.FrameCount, Self.Flags)
+	End
+	
 	' This is used for "atlas" optimization purposes.
 	' By default, 'ImageEntry' objects do not have positions.
 	Method CheckPosition:Bool(X:Int=0, Y:Int=0)
@@ -1237,10 +1289,94 @@ Class AtlasImageEntry Extends ImageEntry
 	End
 	
 	' Methods:
+	
+	#Rem
+		These overloads use the internal "atlas-position" fields
+		in order to properly offset global operations on
+		this object's internal 'Image' reference.
+		
+		This means the 'X' and 'Y' fields are relied upon,
+		and should not misrepresent the underlying 'Image' reference.
+		
+		If this object is being reused as an 'ImageEntry' object,
+		through a pool, or other means, operations can be assumed as normal.
+	#End
+	
 	Method GrabFrom:Void(Atlas:Image, X:Int=0, Y:Int=0)
 		Super.GrabFrom(Atlas, Self.X+X, Self.Y+Y)
 		
 		Return
+	End
+	
+	#Rem
+		These implementations are especially useful For "sub-atlases".
+	#End
+	
+	Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags)
+		Return Super.Grab(Self.X+X, Self.Y+Y, FrameWidth, FrameHeight, FrameCount, Flags)
+	End
+	
+	Method Grab:Image(X:Int=0, Y:Int=0)
+		Return Super.Grab(Self.X+X, Self.Y+Y)
+	End
+	
+	#Rem
+		If you are concerned with safety, please use this command instead of 'Grab'.
+		
+		This can be used to "grab" from the same segment of the "atlas" this
+		object's internal 'Image' was made from.
+		
+		This is only needed if the aforementioned 'Image' reference can't
+		be "grabbed from" by Mojo (Broken into more than one frame).
+		
+		If this already contains a "grabbable" (Single-frame) 'Image', and the
+		'CheckInternal' argument is set to 'True', the standard implementation will be used.
+		
+		This means an "atlas" will not be checked for.
+		
+		If an external atlas was used, an "internal share operation" will not be performed.
+		
+		The 'X' and 'Y' arguments of this command should be assumed
+		as pre-offset by this object's "atlas-position".
+		
+		If the 'ForceAtlasCreation' argument is enabled, instead of just looking for
+		an existing atlas, an optimized generation routine will be used. In other words,
+		if an atlas couldn't be found, it'll generate/load one.
+		
+		This behavior can be unwanted, and because of that, 'ForceAtlasCreation' defaults to 'False'.
+	#End
+	
+	Method GrabFromAtlas:Image(AtlasManager:AtlasImageManager, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, CheckInternal:Bool=True, ForceAtlasCreation:Bool=False)
+		' Check if we can use the standard implementation of 'Grab':
+		If (CheckInternal And (Self.Reference <> Null And Self.Reference.Frames() = 1)) Then
+			Return Grab(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)
+		Endif
+		
+		' Check for errors:
+		If (AtlasManager = Null) Then
+			Return Null
+		Endif
+		
+		' Local variable(s):
+		Local Atlas:Image
+		
+		' Look for a valid "atlas" to "grab" from:
+		If (Not ForceAtlasCreation) Then
+			' This will fail if a valid "atlas" doesn't already exist.
+			Atlas = AtlasManager.LookupAtlas(Self)
+		Else
+			' This isn't the best choice, but it works.
+			' Basically, if an "atlas" can't be found,
+			' this will force one to be generated/loaded.
+			Atlas = AtlasManager.GenerateAtlas(Self)
+		Endif
+		
+		If (Atlas = Null) Then
+			Return Null
+		Endif
+		
+		' We found an "atlas" to work with, "grab" a portion of it.
+		Return Atlas.GrabImage(Self.X+X, Self.Y+Y, FrameWidth, FrameHeight, FrameCount, Flags)
 	End
 	
 	Method CheckPosition:Bool(X:Int=0, Y:Int=0)
@@ -1249,7 +1385,7 @@ Class AtlasImageEntry Extends ImageEntry
 	
 	' Properties:
 	Method CanDeallocate:Bool() Property
-		Return Self.CanBePooled
+		Return Self.CanBePooled And Super.CanDeallocate()
 	End
 	
 	' Fields:
