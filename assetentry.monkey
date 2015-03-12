@@ -55,7 +55,7 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 		Super.New(CreateContainer)
 	End
 	
-	Method New(Assets:AssetContainer<AssetType>, CopyData:Bool=True)
+	Method New(Assets:AssetContainer<CallbackType>, CopyData:Bool=True)
 		' Call the super-class's implementation.
 		Super.New(Assets, CopyData)
 	End
@@ -428,7 +428,7 @@ Class ManagedAssetEntry<ReferenceType, ReferenceGenerator, CallbackType> Extends
 		Super.New(CreateContainer)
 	End
 	
-	Method New(Assets:AssetContainer<AssetType>, CopyData:Bool=True)
+	Method New(Assets:AssetContainer<CallbackType>, CopyData:Bool=True)
 		' Call the super-class's implementation.
 		Super.New(Assets, CopyData)
 	End
