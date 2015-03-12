@@ -1302,18 +1302,6 @@ Class AtlasImageEntry Extends ImageEntry
 	End
 	
 	#Rem
-		These implementations are especially useful For "sub-atlases".
-	#End
-	
-	Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags)
-		Return Super.Grab(Self.X+X, Self.Y+Y, FrameWidth, FrameHeight, FrameCount, Flags)
-	End
-	
-	Method Grab:Image(X:Int=0, Y:Int=0)
-		Return Super.Grab(Self.X+X, Self.Y+Y)
-	End
-	
-	#Rem
 		If you are concerned with safety, please use this command instead of 'Grab'.
 		
 		This can be used to "grab" from the same segment of the "atlas" this
