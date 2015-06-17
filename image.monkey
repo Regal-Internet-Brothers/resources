@@ -11,18 +11,23 @@ Import resources
 Import assetentrymanager
 
 ' Imports (External):
-#If BRL_GAMETARGET_IMPLEMENTED
-	Import mojo.graphics
-	
-	#If RESOURCES_ASYNC_ENABLED
-		Import mojo.asyncloaders
+#If Not RESOURCES_MOJO2
+	#If BRL_GAMETARGET_IMPLEMENTED
+		Import mojo.graphics
+		
+		#If RESOURCES_ASYNC_ENABLED
+			Import mojo.asyncloaders
+		#End
+	#Else
+		Import mojoemulator.graphics
+		
+		#If RESOURCES_ASYNC_ENABLED
+			Import mojoemulator.asyncloaders
+		#End
 	#End
 #Else
-	Import mojoemulator.graphics
-	
-	#If RESOURCES_ASYNC_ENABLED
-		Import mojoemulator.asyncloaders
-	#End
+	' Standard texture management for Mojo2.
+	Import texture
 #End
 
 ' Interfaces:
@@ -1031,13 +1036,13 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	#Rem
 		These methods act as "grab" routines for the internal reference.
 		
-		These work as a standard "share operations", meaning
+		These work as standard "share operations", meaning
 		image-data can't be explicitly discarded in the future.
 		
 		An 'Image' object will only be produced if the internal
 		reference exists, and sharing can be done successfully.
 		
-		These methods do not make a formal calls to 'GetReference',
+		These methods do not make formal calls to 'GetReference',
 		meaning they are not implicitly capable of throwing access exceptions.
 		
 		The "grabbing" behavior of these methods is described by Mojo.

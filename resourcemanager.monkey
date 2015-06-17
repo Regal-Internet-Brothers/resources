@@ -58,8 +58,8 @@ Class ResourceManager
 	
 	' Methods:
 	Method Free:ResourceManager()
-		Self.Images.Free()
-		Self.Sounds.Free()
+		Self.Images.FreeAssets()
+		Self.Sounds.FreeAssets()
 		
 		Self.Images = Null
 		

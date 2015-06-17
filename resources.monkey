@@ -26,3 +26,8 @@ Import image
 
 ' Standard resource-management functionality.
 Import resourcemanager
+
+' Mojo 2 functionality:
+#If RESOURCES_MOJO2
+	Import texture
+#End
