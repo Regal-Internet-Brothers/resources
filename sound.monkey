@@ -141,7 +141,7 @@ Class SoundManager Extends AssetEntryManager<SoundEntry> ' Final
 		' Check if we have a call-back to work with:
 		If (Callback <> Null) Then
 			' Add the call-back specified to the newly generated entry.
-			Entry.Add(Callback)
+			'Entry.Add(Callback)
 			Entry.ExecuteCallbackSelectively(Callback)
 		Endif
 		
