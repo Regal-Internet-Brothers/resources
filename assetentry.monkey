@@ -78,11 +78,11 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 	Method DestroyReference:Void() Abstract
 	
 	Method DestroyReference_Safe:Void(ShouldDestroy:Bool)
-		If (ShouldDestroy And Self.Reference <> Null) Then
+		If (ShouldDestroy And ReferenceAvail) Then
 			' This routine will handle setting the internal reference to 'Null'.
 			DestroyReference()
 		Else
-			Self.Reference = Null
+			Self.Reference = NilRef
 		Endif
 		
 		Return
@@ -111,19 +111,19 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 		and the call-back specified will be automatically executed.
 	#End
 	
-	Method Add:Bool(CallbackEntry:CallbackType, ReferenceMask:ReferenceType=Null)
-		If (Self.Reference <> ReferenceMask) Then
-			' Execute the specified call-back right away.
-			ExecuteCallback(CallbackEntry)
-			
-			' Don't bother continuing, we've done our job.
-			Return True
-		Endif
-		
+	Method Add:Bool(CallbackEntry:CallbackType)
 		' Make sure the call-back container exists.
 		EnsureContainer()
 		
 		Return AddAsset(CallbackEntry)
+	End
+	
+	Method Add:Bool(CallbackEntry:CallbackType, ReferenceMask:ReferenceType)
+		' Execute the specified call-back right away.
+		ExecuteCallback(CallbackEntry)
+		
+		' Don't bother continuing, we've done our job.
+		Return True
 	End
 	
 	' For a version of 'Remove' without the container-check, please use 'QuickRemove'.
@@ -243,7 +243,7 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 		Self.Reference = Ref
 		
 		' Check if the internal-reference points to something:
-		If (Self.Reference <> Null) Then
+		If (ReferenceAvail) Then
 			' Check if standard call-back activation was requested:
 			If (RemoveExistingCallbacks) Then
 				' Activate any tethered call-backs.
@@ -360,6 +360,8 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 		Return
 	End
 	
+	Method ResourceEquals:Bool(X:ReferenceType, Y:ReferenceType) Abstract
+	
 	' Methods (Private):
 	Private
 	
@@ -373,12 +375,17 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 	
 	Public
 	
-	' Properties:
+	' Properties (Abstract):
+	Method ReferenceAvail:Bool() Property Abstract
+	Method NilRef:ReferenceType() Property Abstract
+	
+	' Properties (Implemented):
 	
 	' Commonly used for asynchronous load-checks.
 	' Such checks are unneeded by proper call-backs.
 	Method IsReady:Bool() Property
-		Return (Self.Reference <> Null)
+		'Return (Self.Reference <> Null)
+		Return ReferenceAvail
 	End
 	
 	' Fields:

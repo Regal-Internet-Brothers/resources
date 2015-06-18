@@ -18,6 +18,7 @@ Interface TextureRecipient
 End
 
 ' Classes:
+
 #Rem
 	DESCRIPTION:
 		* This provides basic 'Texture' caching, for details, please view the 'ResourceCache' class's documentation.
@@ -27,6 +28,7 @@ End
 		
 		* You may not reload a texture safely, however, this may be done using 'ForceReload'.
 #End
+
 Class TextureCache Extends ResourceCache<Texture> Final
 	' Global variable(s):
 	Global DefaultFlags:= (Texture.Filter|Texture.Mipmap|Texture.ClampST)

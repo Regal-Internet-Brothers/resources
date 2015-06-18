@@ -1,33 +1,53 @@
+#Rem
+	TODO:
+		* Add support for padding with Mojo 2.
+		* Add support for custom handles with Mojo 2.
+#End
+
 Strict
 
 Public
 
-' Preprocessor related:
-' Nothing so far.
+' Imports:
 
-' Imports (Internal):
+' Internal:
 Import resources
 
 Import assetentrymanager
 
-' Imports (External):
+' External:
 #If Not RESOURCES_MOJO2
+	#If RESOURCES_ASYNC_ENABLED
+		#RESOURCES_IMAGE_ASYNC_ENABLED = True
+	#End
+	
 	#If BRL_GAMETARGET_IMPLEMENTED
+		' Public:
 		Import mojo.graphics
 		
-		#If RESOURCES_ASYNC_ENABLED
+		' Private:
+		Private
+		
+		#If RESOURCES_IMAGE_ASYNC_ENABLED
 			Import mojo.asyncloaders
 		#End
+		
+		Public
 	#Else
+		' Public:
 		Import mojoemulator.graphics
 		
-		#If RESOURCES_ASYNC_ENABLED
+		' Private:
+		Private
+		
+		#If RESOURCES_IMAGE_ASYNC_ENABLED
 			Import mojoemulator.asyncloaders
 		#End
+		
+		Public
 	#End
 #Else
-	' Standard texture management for Mojo2.
-	Import texture
+	Import mojo2.graphics
 #End
 
 ' Interfaces:
@@ -68,7 +88,11 @@ Interface ImageReferenceManager
 		'Image' object if it could not be done asynchronously.
 	#End
 	
-	Method AssignReference:Image(Entry:ImageEntry)
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image(Entry:ImageEntry)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry)
+	#End
 	
 	#Rem
 		"Asynchronous" loading may be defined as an implementation sees fit.
@@ -77,7 +101,11 @@ Interface ImageReferenceManager
 		"Loading" does not have to be "asynchronous" if impossible.
 	#End
 	
-	Method AssignReferenceAsync:Image(Entry:ImageEntry)
+	#If Not RESOURCES_MOJO2
+		Method AssignReferenceAsync:Image(Entry:ImageEntry)
+	#Else
+		Method AssignReferenceAsync:Image[](Entry:ImageEntry)
+	#End
 End
 
 ' Classes:
@@ -106,6 +134,13 @@ End
 #End
 
 Class ImageManager Extends AssetEntryManager<ImageEntry>
+	' Global variable(s):
+	#If Not RESOURCES_MOJO2
+		Global DefaultFlags:= Image.DefaultFlags
+	#Else
+		Global DefaultFlags:= (Image.Filter|Image.Mipmap)
+	#End
+	
 	' Constructor(s):
 	Method New(CreateContainer:Bool=True, EntryPoolSize:Int=Default_EntryPool_Size)
 		' Call the super-class's implementation.
@@ -172,7 +207,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 			' Check if building was requested:
 			If (ShouldBuild) Then
 				' Check if a "reference" is already available.
-				If (E.Reference = Null) Then ' CheckReference
+				If (Not E.ReferenceAvail) Then ' CheckReference
 					' Build the newly created entry.
 					BuildEntry(E)
 				Endif
@@ -196,7 +231,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 	End
 	
 	' This routine will retrieve an image-entry based on the input given.
-	Method Load:ImageEntry(Path:String, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+	Method Load:ImageEntry(Path:String, FrameCount:Int=1, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
 			If (I.Equals(Path, FrameCount, Flags)) Then
 				I.ExecuteCallbackSelectively(Callback)
@@ -231,7 +266,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		Return Entry
 	End
 	
-	Method Load:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+	Method Load:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
 			If (I.Equals(Path, FrameCount, Flags, FrameWidth, FrameHeight)) Then
 				I.ExecuteCallbackSelectively(Callback)
@@ -266,7 +301,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		Return Entry
 	End
 	
-	Method Create:ImageEntry(FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+	Method Create:ImageEntry(FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
 			If (I.Equals(FrameWidth, FrameHeight, FrameCount, Flags)) Then
 				I.ExecuteCallbackSelectively(Callback)
@@ -316,7 +351,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		Return AllocateRawEntry().Construct()
 	End
 	
-	Method AllocateEntry:ImageEntry(Path:String, FrameCount:Int=1, Flags:Int=Image.DefaultFlags)
+	Method AllocateEntry:ImageEntry(Path:String, FrameCount:Int=1, Flags:Int=DefaultFlags)
 		Return AllocateRawEntry().Construct(Path, FrameCount, Flags)
 	End
 	
@@ -324,11 +359,11 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		Return AllocateRawEntry().Construct(A)
 	End
 	
-	Method AllocateEntry:ImageEntry(Width:Int, Height:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, Path:String="")
+	Method AllocateEntry:ImageEntry(Width:Int, Height:Int, FrameCount:Int, Flags:Int=DefaultFlags, Path:String="")
 		Return AllocateRawEntry().Construct(Width, Height, FrameCount, Flags, Path)
 	End
 	
-	Method AllocateEntry:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags)
+	Method AllocateEntry:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags)
 		Return AllocateRawEntry().Construct(Path, FrameWidth, FrameHeight, FrameCount, Flags)
 	End
 	
@@ -377,7 +412,7 @@ End
 		to have their own handles and flags, without wasting memory at all.
 #End
 
-#If RESOURCES_ASYNC_ENABLED
+#If RESOURCES_IMAGE_ASYNC_ENABLED
 Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager, IOnLoadImageComplete
 #Else
 Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
@@ -465,13 +500,13 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	' Methods:
 	
 	' This is effectively the same as the 'LoadSegment' command.
-	Method LoadAutomaticSegment:ImageEntry(Path:String, X:Int=0, Y:Int=0, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, FrameWidth:Int=0, FrameHeight:Int=0, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+	Method LoadAutomaticSegment:ImageEntry(Path:String, X:Int=0, Y:Int=0, FrameCount:Int=1, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, FrameWidth:Int=0, FrameHeight:Int=0, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		Return LoadSegment(Path, X, Y, FrameWidth, FrameHeight, FrameCount, Flags, Callback, AddInternally, CareAboutInternalAdd)
 	End
 	
 	' This command can be used to load a specific portion of an 'Image' object's surface.
 	' Like the standard 'Load' commands, this will seamlessly work with the internal "atlas" map.
-	Method LoadSegment:ImageEntry(Path:String, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
+	Method LoadSegment:ImageEntry(Path:String, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
 			' Ensure that the object in question is the equal, and it's located at the same place on the atlas:
 			If (I.Equals(Path, FrameCount, Flags, FrameWidth, FrameHeight) And I.CheckPosition(X, Y)) Then
@@ -544,9 +579,9 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 		Return ForceGenerateAtlas(Path)
 	End
 	
-	#If RESOURCES_ASYNC_ENABLED
+	#If RESOURCES_IMAGE_ASYNC_ENABLED
 		' Please refrain from using the 'Flags' argument(s) of these methods.
-		Method GenerateAtlasAsync:Void(Entry:ImageEntry, Flags:Int=Image.DefaultFlags)
+		Method GenerateAtlasAsync:Void(Entry:ImageEntry, Flags:Int=DefaultFlags)
 			#If RESOURCES_SAFE
 				Entry.WaitingForAsynchronousReference = True
 			#End
@@ -556,13 +591,13 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 			Return
 		End
 		
-		Method GenerateAtlasAsync:Void(Path:String, Flags:Int=Image.DefaultFlags)
+		Method GenerateAtlasAsync:Void(Path:String, Flags:Int=DefaultFlags)
 			GenerateAtlasAsync(Path, Self, Flags)
 			
 			Return
 		End
 		
-		Method GenerateAtlasAsync:Void(Path:String, Callback:IOnLoadImageComplete, Flags:Int=Image.DefaultFlags)
+		Method GenerateAtlasAsync:Void(Path:String, Callback:IOnLoadImageComplete, Flags:Int=DefaultFlags)
 			LoadImageAsync(Path, 1, Flags, Callback)
 			
 			Return
@@ -580,7 +615,11 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	#End
 	
 	Method ForceGenerateAtlas:Image(Path:String)
-		Local Atlas:= LoadImage(Path)
+		#If Not RESOURCES_MOJO2
+			Local Atlas:= LoadImage(Path)
+		#Else
+			Local Atlas:= Image.Load(Path, 0.0, 0.0, DefaultFlags)
+		#End
 		
 		SetAtlas(Atlas, Path)
 		
@@ -622,97 +661,125 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 	End
 	
 	' These overloads exist for the sake of compliance with the 'ImageReferenceManager' interface:
-	Method AssignReference:Image(Entry:ImageEntry)
-		Return AssignReference(Entry, True)
-	End
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image(Entry:ImageEntry)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry)
+	#End
+			Return AssignReference(Entry, True)
+		End
 	
-	Method AssignReferenceAsync:Image(Entry:ImageEntry)
-		Return AssignReferenceAsync(Entry, True)
-	End
+	#If Not RESOURCES_MOJO2
+		Method AssignReferenceAsync:Image(Entry:ImageEntry)
+	#Else
+		Method AssignReferenceAsync:Image[](Entry:ImageEntry)
+	#End
+			Return AssignReferenceAsync(Entry, True)
+		End
 	
-	Method AssignReference:Image(Entry:ImageEntry, CallUpOnFailure:Bool, X:Int=0, Y:Int=0)
-		Return AssignReference(Entry, Entry.ShouldLoadFromDisk, CallUpOnFailure, X, Y)
-	End
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image(Entry:ImageEntry, CallUpOnFailure:Bool, X:Int=0, Y:Int=0)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry, CallUpOnFailure:Bool, X:Int=0, Y:Int=0)
+	#End
+			Return AssignReference(Entry, Entry.ShouldLoadFromDisk, CallUpOnFailure, X, Y)
+		End
+
+	#If Not RESOURCES_MOJO2	
+		Method AssignReference:Image(Entry:ImageEntry, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
+	#End
+			Return AssignReference(Entry, Entry.ShouldLoadFromDisk, Atlas, CallUpOnFailure, X, Y)
+		End
 	
-	Method AssignReference:Image(Entry:ImageEntry, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
-		Return AssignReference(Entry, Entry.ShouldLoadFromDisk, Atlas, CallUpOnFailure, X, Y)
-	End
-	
-	Method AssignReference:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, CallUpOnFailure:Bool, X:Int=0, Y:Int=0)
-		If (ShouldLoadFromDisk) Then
-			'Local Atlas:= GenerateAtlas(Entry)
-			
-			Return AssignReference(Entry, ShouldLoadFromDisk, GenerateAtlas(Entry), CallUpOnFailure, X, Y) ' ShouldLoadFromDisk And (Atlas <> Null)
-		Endif
-		
-		Return AssignReference(Entry, False, Null, CallUpOnFailure, X, Y)
-	End
-	
-	Method AssignReference:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
-		' Check if we're loading from the disk:
-		#If RESOURCES_SAFE ' And CONFIG <> "debug"
-			If (ShouldLoadFromDisk And Atlas <> Null) Then
-		#Else
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, CallUpOnFailure:Bool, X:Int=0, Y:Int=0)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry, ShouldLoadFromDisk:Bool, CallUpOnFailure:Bool, X:Int=0, Y:Int=0)
+	#End
 			If (ShouldLoadFromDisk) Then
-		#End
-				#If RESOURCES_SAFE And CONFIG = "debug"
-					If (Entry.FrameCount <= 0) Then
-						DebugLog("Invalid frame-count detected.")
-						
-						DebugStop()
-					Endif
-					
-					If (Entry.FrameWidth <= 0 And Entry.FrameHeight > 0 Or Entry.FrameWidth > 0 And Entry.FrameHeight <= 0) Then
-						DebugLog("Invalid frame-size detected.")
-						
-						DebugStop()
-					Endif
-				#End
+				'Local Atlas:= GenerateAtlas(Entry)
 				
-				Entry.GrabFrom(Atlas, X, Y)
-			Else
-				If (CallUpOnFailure) Then
-					Super.BuildEntry(Entry, False)
-				Endif
+				Return AssignReference(Entry, ShouldLoadFromDisk, GenerateAtlas(Entry), CallUpOnFailure, X, Y) ' ShouldLoadFromDisk And (Atlas <> Null)
 			Endif
-		
-		Return Entry.Reference
-	End
+			
+			Return AssignReference(Entry, False, Null, CallUpOnFailure, X, Y)
+		End
 	
-	Method AssignReferenceAsync:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, CallUpOnFailure:Bool=True)
-		#If RESOURCES_ASYNC_ENABLED
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry, ShouldLoadFromDisk:Bool, Atlas:Image, CallUpOnFailure:Bool=True, X:Int=0, Y:Int=0)
+	#End
 			' Check if we're loading from the disk:
-			If (ShouldLoadFromDisk) Then
-				Local Atlas:= LookupAtlas(Entry)
-				
-				If (Atlas <> Null) Then
-					Return AssignReference(Entry, True, Atlas, CallUpOnFailure)
-				Else
-					#If RESOURCES_SAFE
-						If (Not Contains(Entry)) Then
-							Return AssignReference(Entry, True, CallUpOnFailure)
-						Else
-					#End
-							' Generate the "atlas" for this 'ImageEntry' object asynchronously.
-							GenerateAtlasAsync(Entry)
-					#If RESOURCES_SAFE
+			#If RESOURCES_SAFE ' And CONFIG <> "debug"
+				If (ShouldLoadFromDisk And Atlas <> Null) Then
+			#Else
+				If (ShouldLoadFromDisk) Then
+			#End
+					#If RESOURCES_SAFE And CONFIG = "debug"
+						If (Entry.FrameCount <= 0) Then
+							DebugLog("Invalid frame-count detected.")
+							
+							DebugStop()
+						Endif
+						
+						If (Entry.FrameWidth <= 0 And Entry.FrameHeight > 0 Or Entry.FrameWidth > 0 And Entry.FrameHeight <= 0) Then
+							DebugLog("Invalid frame-size detected.")
+							
+							DebugStop()
 						Endif
 					#End
+					
+					Entry.GrabFrom(Atlas, X, Y)
+				Else
+					If (CallUpOnFailure) Then
+						Super.BuildEntry(Entry, False)
+					Endif
 				Endif
-			Else
-				If (CallUpOnFailure) Then
-					Super.BuildEntryAsync(Entry, False)
-				Endif
-			Endif
 			
 			Return Entry.Reference
-		#Else
-			Return AssignReference(Entry, ShouldLoadFromDisk, CallUpOnFailure)
-		#End
-	End
+		End
+	
+	#If Not RESOURCES_MOJO2
+		Method AssignReferenceAsync:Image(Entry:ImageEntry, ShouldLoadFromDisk:Bool, CallUpOnFailure:Bool=True)
+	#Else
+		Method AssignReferenceAsync:Image[](Entry:ImageEntry, ShouldLoadFromDisk:Bool, CallUpOnFailure:Bool=True)
+	#End
+			#If RESOURCES_IMAGE_ASYNC_ENABLED
+				' Check if we're loading from the disk:
+				If (ShouldLoadFromDisk) Then
+					Local Atlas:= LookupAtlas(Entry)
+					
+					If (Atlas <> Null) Then
+						Return AssignReference(Entry, True, Atlas, CallUpOnFailure)
+					Else
+						#If RESOURCES_SAFE
+							If (Not Contains(Entry)) Then
+								Return AssignReference(Entry, True, CallUpOnFailure)
+							Else
+						#End
+								' Generate the "atlas" for this 'ImageEntry' object asynchronously.
+								GenerateAtlasAsync(Entry)
+						#If RESOURCES_SAFE
+							Endif
+						#End
+					Endif
+				Else
+					If (CallUpOnFailure) Then
+						Super.BuildEntryAsync(Entry, False)
+					Endif
+				Endif
+				
+				Return Entry.Reference
+			#Else
+				Return AssignReference(Entry, ShouldLoadFromDisk, CallUpOnFailure)
+			#End
+		End
 	
 	' Call-backs:
-	#If RESOURCES_ASYNC_ENABLED
+	#If RESOURCES_IMAGE_ASYNC_ENABLED
 		Method OnLoadImageComplete:Void(IncomingReference:Image, Path:String, Source:IAsyncEventSource=Null)
 			' Check for errors:
 			#If RESOURCES_SAFE
@@ -775,28 +842,71 @@ End
 		For details, please see the 'GenerateReference' and 'GenerateReferenceAsync' commands.
 #End
 
-#If RESOURCES_ASYNC_ENABLED
+#If RESOURCES_IMAGE_ASYNC_ENABLED
 Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager, IOnLoadImageComplete
 #Else
-Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager
+#If Not RESOURCES_MOJO2
+	Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager
+#Else
+	Class ImageEntry Extends ManagedAssetEntry<Image[], ImageReferenceManager, ImageEntryRecipient> Implements ImageReferenceManager
+#End
 #End
 	' Constant variable(s):
 	' Nothing so far.
 	
 	' Global variable(s):
+	Global DefaultFlags:= ImageManager.DefaultFlags
+	
+	' Functions (Public):
 	' Nothing so far.
+	
+	' Functions (Private):
+	Private
+	
+	#If RESOURCES_MOJO2
+		' Mojo compatibility layer:
+		Function CreateImage:Image[](Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
+			Return [New Image(Width, Height, HandleX, HandleY, Flags)]
+		End
+		
+		Function LoadImage:Image[](Path:String, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5, Padded:Bool=False)
+			Return Image.LoadFrames(Path, FrameCount, Padded, HandleX, HandleY, Flags)
+		End
+		
+		Function LoadImage:Image[](Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
+			Local I:= Image.Load(Path, 0.0, 0.0, Flags)
+
+			Return GrabImage(I, 0, 0, FrameWidth, FrameHeight, FrameCount, Flags)
+		End
+		
+		Function GrabImage:Image[](I:Image, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
+			Local Count:= Min((I.Width / FrameWidth) + (I.Height / FrameHeight), FrameCount)
+			
+			Local Output:= New Image[Count]
+			
+			For Local Entry:= 0 Until Count ' Output.Length()
+				Local VPos:Int = (Entry*FrameWidth)
+				
+				Output[Entry] = New Image(I, (VPos Mod I.Width), ((VPos / I.Width) * FrameHeight), FrameWidth, FrameHeight, HandleX, HandleY)
+			Next
+			
+			Return Output
+		End
+	#End
+	
+	Public
 	
 	' Constructor(s) (Public):
 	
 	' These constructors exhibit the same behavior as their 'Construct' counterparts:
-	Method New(Path:String="", FrameCount:Int=1, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
+	Method New(Path:String="", FrameCount:Int=1, Flags:Int=DefaultFlags, IsLinked:Bool=Default_IsLinked)
 		' Call the super-class's implementation.
 		Super.New(False)
 		
 		Construct(Path, FrameCount, Flags, IsLinked)
 	End
 	
-	Method New(Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, Path:String="", IsLinked:Bool=Default_IsLinked)
+	Method New(Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, Path:String="", IsLinked:Bool=Default_IsLinked)
 		' Call the super-class's implementation.
 		Super.New(False)
 		
@@ -804,7 +914,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Construct(Width, Height, FrameCount, Flags, Path, IsLinked)
 	End
 	
-	Method New(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
+	Method New(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, IsLinked:Bool=Default_IsLinked)
 		' Call the super-class's implementation.
 		Super.New(False)
 		
@@ -840,15 +950,15 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Return Construct(Entry.Path, Entry.FrameWidth, Entry.FrameHeight, Entry.FrameCount, Entry.Flags, CopyReferenceData)
 	End
 	
-	Method Construct:ImageEntry(Path:String="", FrameCount:Int=1, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
+	Method Construct:ImageEntry(Path:String="", FrameCount:Int=1, Flags:Int=DefaultFlags, IsLinked:Bool=Default_IsLinked)
 		Return Construct(Path, 0, 0, FrameCount, Flags, IsLinked)
 	End
 	
-	Method Construct:ImageEntry(Width:Int, Height:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, Path:String="", IsLinked:Bool=Default_IsLinked)
+	Method Construct:ImageEntry(Width:Int, Height:Int, FrameCount:Int, Flags:Int=DefaultFlags, Path:String="", IsLinked:Bool=Default_IsLinked)
 		Return Construct(Path, Width, Height, FrameCount, Flags, IsLinked)
 	End
 	
-	Method Construct:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked)
+	Method Construct:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, IsLinked:Bool=Default_IsLinked)
 		' Set the default link-state.
 		Self.IsLinked = IsLinked
 		
@@ -878,17 +988,21 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	' Constructor(s) (Private):
 	Private
 	
-	Method ManagedGenerateReference:Image(Manager:ImageReferenceManager, DiscardExistingData:Bool=Default_DestroyReferenceData)
-		If (DiscardExistingData) Then
-			DestroyReference_Safe()
-		Endif
-		
-		If (Manager = Null) Then
-			Return Self.AssignReference(Self)
-		Endif
-		
-		Return Manager.AssignReference(Self)
-	End
+	#If Not RESOURCES_MOJO2
+		Method ManagedGenerateReference:Image(Manager:ImageReferenceManager, DiscardExistingData:Bool=Default_DestroyReferenceData)
+	#Else
+		Method ManagedGenerateReference:Image[](Manager:ImageReferenceManager, DiscardExistingData:Bool=Default_DestroyReferenceData)
+	#End
+			If (DiscardExistingData) Then
+				DestroyReference_Safe()
+			Endif
+			
+			If (Manager = Null) Then
+				Return Self.AssignReference(Self)
+			Endif
+			
+			Return Manager.AssignReference(Self)
+		End
 	
 	#Rem
 		This command is not guaranteed to be "asynchronous".
@@ -900,18 +1014,22 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Behavior of this command, and 'BuildAsync' is susceptible to change.
 	#End
 	
-	Method ManagedGenerateReferenceAsync:Image(Manager:ImageReferenceManager, DiscardExistingData:Bool=Default_DestroyReferenceData)
-		' Whether asynchronous loading happens or not, this needs to take place:
-		If (DiscardExistingData) Then
-			DestroyReference_Safe()
-		Endif
-		
-		If (Manager = Null) Then
-			Return Self.AssignReferenceAsync(Self)
-		Endif
-		
-		Return Manager.AssignReferenceAsync(Self)
-	End
+	#If Not RESOURCES_MOJO2
+		Method ManagedGenerateReferenceAsync:Image(Manager:ImageReferenceManager, DiscardExistingData:Bool=Default_DestroyReferenceData)
+	#Else
+		Method ManagedGenerateReferenceAsync:Image[](Manager:ImageReferenceManager, DiscardExistingData:Bool=Default_DestroyReferenceData)
+	#End
+			' Whether asynchronous loading happens or not, this needs to take place:
+			If (DiscardExistingData) Then
+				DestroyReference_Safe()
+			Endif
+			
+			If (Manager = Null) Then
+				Return Self.AssignReferenceAsync(Self)
+			Endif
+			
+			Return Manager.AssignReferenceAsync(Self)
+		End
 	
 	Public
 	
@@ -938,8 +1056,15 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	Private
 	
 	Method DestroyReference:Void()
-		Self.Reference.Discard()
-		Self.Reference = Null
+		#If Not RESOURCES_MOJO2
+			Self.Reference.Discard()
+		#Else
+			For Local I:= Eachin Self.Reference
+				I.Discard()
+			Next
+		#End
+		
+		Self.Reference = NilRef
 		
 		Return
 	End
@@ -947,53 +1072,69 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	Public
 	
 	' Methods (Public):
-	Method AssignReference:Image(Entry:ImageEntry)
-		Return Entry.AssignReference()
-	End
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image(Entry:ImageEntry)
+	#Else
+		Method AssignReference:Image[](Entry:ImageEntry)
+	#End
+			Return Entry.AssignReference()
+		End
 	
-	Method AssignReferenceAsync:Image(Entry:ImageEntry)
-		Return Entry.AssignReferenceAsync()
-	End
+	#If Not RESOURCES_MOJO2
+		Method AssignReferenceAsync:Image(Entry:ImageEntry)
+	#Else
+		Method AssignReferenceAsync:Image[](Entry:ImageEntry)
+	#End
+			Return Entry.AssignReferenceAsync()
+		End
 	
-	Method AssignReference:Image()
-		If (ShouldLoadFromDisk) Then
-			If (FrameWidth > 0 And FrameHeight > 0) Then
-				SetReference(LoadImage(Path, FrameWidth, FrameHeight, FrameCount, Flags))
-			Else
-				SetReference(LoadImage(Path, FrameCount, Flags))
-			Endif
-		Else
-			SetReference(CreateImage(FrameWidth, FrameHeight, FrameCount, Flags))
-		Endif
-		
-		If (Reference = Null) Then
-			Throw New ImageNotFoundException(Self)
-		Endif
-		
-		Return Reference
-	End
-	
-	Method AssignReferenceAsync:Image()
-		#If RESOURCES_ASYNC_ENABLED
+	#If Not RESOURCES_MOJO2
+		Method AssignReference:Image()
+	#Else
+		Method AssignReference:Image[]()
+	#End
 			If (ShouldLoadFromDisk) Then
-				If (FrameWidth < 0 Or FrameHeight < 0) Then
-					' Asynchronously load the image-data requested.
-					LoadImageAsync(Path, FrameCount, Flags, Self)
-					
-					#If RESOURCES_SAFE
-						Self.WaitingForAsynchronousReference = True
-					#End
-					
-					' Return nothing; this tells the user that
-					' the image is being loaded asynchronously.
-					Return Null
+				If (FrameWidth > 0 And FrameHeight > 0) Then
+					SetReference(LoadImage(Path, FrameWidth, FrameHeight, FrameCount, Flags))
+				Else
+					SetReference(LoadImage(Path, FrameCount, Flags))
 				Endif
+			Else
+				SetReference(CreateImage(FrameWidth, FrameHeight, FrameCount, Flags))
 			Endif
-		#End
-		
-		' If this point was reached, we need to perform operations normally.
-		Return AssignReference()
-	End
+			
+			If (Not ReferenceAvail) Then
+				Throw New ImageNotFoundException(Self)
+			Endif
+			
+			Return Reference
+		End
+	
+	#If Not RESOURCES_MOJO2
+		Method AssignReferenceAsync:Image()
+	#Else
+		Method AssignReferenceAsync:Image[]()
+	#End
+			#If RESOURCES_IMAGE_ASYNC_ENABLED
+				If (ShouldLoadFromDisk) Then
+					If (FrameWidth < 0 Or FrameHeight < 0) Then
+						' Asynchronously load the image-data requested.
+						LoadImageAsync(Path, FrameCount, Flags, Self)
+						
+						#If RESOURCES_SAFE
+							Self.WaitingForAsynchronousReference = True
+						#End
+						
+						' Return nothing; this tells the user that
+						' the image is being loaded asynchronously.
+						Return Null
+					Endif
+				Endif
+			#End
+			
+			' If this point was reached, we need to perform operations normally.
+			Return AssignReference()
+		End
 	
 	Method ExecuteCallback:Void(Callback:ImageEntryRecipient)
 		Callback.OnImageResourceLoaded(Self)
@@ -1001,23 +1142,27 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Return
 	End
 	
-	Method GetReference:Image()
-		#If RESOURCES_SAFE
-			If (WaitingForAsynchronousReference) Then
-				#If CONFIG = "debug"
-					DebugStop()
-				#End
-				
-				' Throw an exception regarding the asynchronous state of the 'Reference' property.
-				Throw New AsyncImageUnavailableException(Self)
-				
-				' Return, just in case.
-				Return Null
-			Endif
-		#End
-		
-		Return Super.GetReference()
-	End
+	#If Not RESOURCES_MOJO2
+		Method GetReference:Image()
+	#Else
+		Method GetReference:Image[]()
+	#End
+			#If RESOURCES_SAFE
+				If (WaitingForAsynchronousReference) Then
+					#If CONFIG = "debug"
+						DebugStop()
+					#End
+					
+					' Throw an exception regarding the asynchronous state of the 'Reference' property.
+					Throw New AsyncImageUnavailableException(Self)
+					
+					' Return, just in case.
+					'Return Null
+				Endif
+			#End
+			
+			Return Super.GetReference()
+		End
 	
 	Method GrabFrom:Void(Atlas:Image, X:Int=0, Y:Int=0)
 		Local FrameWidth:Int
@@ -1028,7 +1173,11 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			FrameHeight = (Atlas.Height()-Y)
 		Endif
 		
-		SetReference(Atlas.GrabImage(X, Y, FrameWidth, FrameHeight, FrameCount, Flags))
+		#If Not RESOURCES_MOJO2
+			SetReference(Atlas.GrabImage(X, Y, FrameWidth, FrameHeight, FrameCount, Flags))
+		#Else
+			SetReference(GrabImage(Atlas, X, Y, FrameWidth, FrameHeight, FrameCount, Flags))
+		#End
 		
 		Return
 	End
@@ -1049,7 +1198,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Please keep in mind Mojo's behavior regarding multi-frame "grabbing".
 	#End
 	
-	Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags)
+	Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags)
 		' Check for errors:
 		
 		' Check if we have an internal reference to "grab" from:
@@ -1083,7 +1232,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	End
 	
 	' Call-backs:
-	#If RESOURCES_ASYNC_ENABLED
+	#If RESOURCES_IMAGE_ASYNC_ENABLED
 		Method OnLoadImageComplete:Void(IncomingReference:Image, Path:String="", Source:IAsyncEventSource=Null)
 			If (Path <> Self.Path) Then
 				#If RESOURCES_SAFE And CONFIG = "debug"
@@ -1109,8 +1258,10 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	#End
 	
 	Method Equals:Bool(Input:ImageEntry, CheckReference:Bool)
-		If (CheckReference And (Self.Reference <> Input.Reference)) Then
-			Return False
+		If (CheckReference) Then
+			If (Not ResourceEquals(Self.Reference, Input.Reference)) Then
+				Return False
+			Endif
 		Endif
 		
 		Return Equals(Input)
@@ -1131,21 +1282,53 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Return Equals(Input.Path, Input.FrameCount, Input.Flags, Input.FrameWidth, Input.FrameHeight)
 	End
 	
-	Method Equals:Bool(Input_Reference:Image, Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
-		Return ((Self.Reference = Input_Reference) And Equals(Input_FrameWidth, Input_FrameHeight, Input_FrameCount, Input_Flags))
-	End
+	#If Not RESOURCES_MOJO2
+		Method Equals:Bool(Input_Reference:Image, Input_FrameCount:Int=1, Input_Flags:Int=DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
+	#Else
+		Method Equals:Bool(Input_Reference:Image[], Input_FrameCount:Int=1, Input_Flags:Int=DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
+	#End
+			Return (ResourceEquals(Self.Reference, Input_Reference) And Equals(Input_FrameWidth, Input_FrameHeight, Input_FrameCount, Input_Flags))
+		End
 	
-	Method Equals:Bool(Input_Reference:Image, Input_Path:String="", Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
-		Return ((Self.Reference = Input_Reference) And Equals(Input_Path, Input_FrameCount, Input_Flags, Input_FrameWidth, Input_FrameHeight))
-	End
+	#If Not RESOURCES_MOJO2
+		Method Equals:Bool(Input_Reference:Image, Input_Path:String="", Input_FrameCount:Int=1, Input_Flags:Int=DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
+	#Else
+		Method Equals:Bool(Input_Reference:Image[], Input_Path:String="", Input_FrameCount:Int=1, Input_Flags:Int=DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
+	#End
+			Return (ResourceEquals(Self.Reference, Input_Reference) And Equals(Input_Path, Input_FrameCount, Input_Flags, Input_FrameWidth, Input_FrameHeight))
+		End
 	
-	Method Equals:Bool(Input_Path:String, Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
+	Method Equals:Bool(Input_Path:String, Input_FrameCount:Int=1, Input_Flags:Int=DefaultFlags, Input_FrameWidth:Int=0, Input_FrameHeight:Int=0)
 		Return ((Path = Input_Path) And (FrameWidth = Input_FrameWidth And FrameHeight = Input_FrameHeight And FrameCount = Input_FrameCount And Flags = Input_Flags)) ' Equals(Input_FrameWidth, Input_FrameHeight, Input_FrameCount, Input_Flags)
 	End
 	
-	Method Equals:Bool(Input_FrameWidth:Int=0, Input_FrameHeight:Int=0, Input_FrameCount:Int=1, Input_Flags:Int=Image.DefaultFlags)
+	Method Equals:Bool(Input_FrameWidth:Int=0, Input_FrameHeight:Int=0, Input_FrameCount:Int=1, Input_Flags:Int=DefaultFlags)
 		Return Equals("", Input_FrameCount, Input_Flags, Input_FrameWidth, Input_FrameHeight)
 	End
+	
+	#If RESOURCES_MOJO2
+		Method ResourceEquals:Bool(X:Image[], Y:Image[])
+			Local Length:= X.Length()
+			
+			If (Length <> Y.Length()) Then
+				Return False
+			Endif
+			
+			For Local I:= 0 Until Length
+				If (X[I] <> Y[I]) Then
+				'If (Not Equals(X[I], Y[I])) Then
+					Return False
+				Endif
+			Next
+			
+			' Return the default response.
+			Return True
+		End
+	#Else
+		Method ResourceEquals:Bool(X:Image, Y:Image)
+			Return (X = Y)
+		End
+	#End
 	
 	' Methods (Private):
 	Private
@@ -1162,6 +1345,24 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	Method ShouldLoadFromDisk:Bool() Property
 		Return (Path.Length() > 0)
 	End
+	
+	Method ReferenceAvail:Bool() Property
+		#If Not RESOURCES_MOJO2
+			Return (Reference <> Null)
+		#Else
+			Return (Reference.Length() > 0)
+		#End
+	End
+	
+	#If Not RESOURCES_MOJO2
+		Method NilRef:Image() Property
+			Return Null
+		End
+	#Else
+		Method NilRef:Image[]() Property
+			Return []
+		End
+	#End
 	
 	#If RESOURCES_SAFE
 		Method IsReady:Bool() Property
@@ -1215,7 +1416,7 @@ Class AtlasImageEntry Extends ImageEntry
 	Const Default_CanBePooled:Bool = False
 	
 	' Constructor(s):
-	Method New(Path:String="", FrameCount:Int=1, Flags:Int=Image.DefaultFlags, X:Int=0, Y:Int=0, IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
+	Method New(Path:String="", FrameCount:Int=1, Flags:Int=DefaultFlags, X:Int=0, Y:Int=0, IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
 		' Call the super-class's implementation.
 		Super.New(Path, FrameCount, Flags, IsLinked)
 		
@@ -1225,7 +1426,7 @@ Class AtlasImageEntry Extends ImageEntry
 		Self.CanBePooled = CanBePooled
 	End
 	
-	Method New(Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, X:Int=0, Y:Int=0, Path:String="", IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
+	Method New(Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, X:Int=0, Y:Int=0, Path:String="", IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
 		' Call the super-class's implementation.
 		Super.New(Width, Height, FrameCount, Flags, Path, IsLinked)
 		
@@ -1235,7 +1436,7 @@ Class AtlasImageEntry Extends ImageEntry
 		Self.CanBePooled = CanBePooled
 	End
 	
-	Method New(Path:String, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=Image.DefaultFlags, IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
+	Method New(Path:String, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, IsLinked:Bool=Default_IsLinked, CanBePooled:Bool=Default_CanBePooled)
 		' Call the super-class's implementation.
 		Super.New(Path, FrameWidth, FrameHeight, FrameCount, Flags, IsLinked)
 		
@@ -1332,7 +1533,7 @@ Class AtlasImageEntry Extends ImageEntry
 		This behavior can be unwanted, and because of that, 'ForceAtlasCreation' defaults to 'False'.
 	#End
 	
-	Method GrabFromAtlas:Image(AtlasManager:AtlasImageManager, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=Image.DefaultFlags, CheckInternal:Bool=True, ForceAtlasCreation:Bool=False)
+	Method GrabFromAtlas:Image(AtlasManager:AtlasImageManager, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, CheckInternal:Bool=True, ForceAtlasCreation:Bool=False)
 		' Check if we can use the standard implementation of 'Grab':
 		If (CheckInternal And (Self.Reference <> Null And Self.Reference.Frames() = 1)) Then
 			Return Grab(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)

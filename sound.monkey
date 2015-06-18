@@ -16,13 +16,24 @@ Public
 #RESOURCES_SOUND_IMPLEMENTED = True
 #RESOURCES_SOUND_SYNCHRONOUS_BY_DEFAULT = True ' False
 
-' Imports (Internal):
+' Imports:
+
+' Internal:
 Import resources
 
 Import assetentrymanager
 
-' Imports (External):
+' External (Public):
 Import mojo.audio
+
+' External (Private):
+Private
+
+#If RESOURCES_ASYNC_ENABLED
+	Import mojo.asyncloaders
+#End
+
+Public
 
 ' Interfaces:
 
@@ -418,6 +429,14 @@ Class SoundEntry Extends AssetEntry<Sound, SoundEntryRecipient> ' Final
 	End
 	
 	' Properties:
+	Method ReferenceAvail:Bool() Property
+		Return (Self.Reference <> Null)
+	End
+	
+	Method NilRef:Sound() Property
+		Return Null
+	End
+	
 	#If RESOURCES_SAFE
 		Method IsReady:Bool() Property
 			Return Super.IsReady() And Not WaitingForAsynchronousReference
