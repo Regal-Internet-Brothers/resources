@@ -132,7 +132,7 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 			Return True ' False
 		Endif
 		
-		Return RemoveAsset(Asset)
+		Return RemoveAsset(CallbackEntry)
 	End
 	
 	#Rem
@@ -156,7 +156,7 @@ Class AssetEntry<ReferenceType, CallbackType> Extends AssetManager<CallbackType>
 	
 	' Unlike 'AddAssets', this command will back every "add" using 'QuickAdd'.
 	Method QuickAddAssets:Bool(Entries:AssetManager<CallbackType>)
-		For Local Entry:= Eachin Entry
+		For Local Entry:= Eachin Entries
 			QuickAdd(Entry)
 		Next
 		

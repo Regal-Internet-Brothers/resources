@@ -428,6 +428,10 @@ Class SoundEntry Extends AssetEntry<Sound, SoundEntryRecipient> ' Final
 		Return False
 	End
 	
+	Method ResourceEquals:Bool(X:Sound, Y:Sound)
+		Return (X = Y)
+	End
+	
 	' Properties:
 	Method ReferenceAvail:Bool() Property
 		Return (Self.Reference <> Null)

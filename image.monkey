@@ -874,20 +874,24 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		End
 		
 		Function LoadImage:Image[](Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
-			Local I:= Image.Load(Path, 0.0, 0.0, Flags)
-
-			Return GrabImage(I, 0, 0, FrameWidth, FrameHeight, FrameCount, Flags)
+			Return GrabImage(Material.Load(Path, Flags, Null), 0, 0, FrameWidth, FrameHeight, FrameCount, Flags)
 		End
 		
 		Function GrabImage:Image[](I:Image, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
-			Local Count:= Min((I.Width / FrameWidth) + (I.Height / FrameHeight), FrameCount)
+			Return GrabImage(I.Material, X, Y, FrameWidth, FrameHeight, FrameCount, Flags, HandleX, HandleY)
+		End
+		
+		Function GrabImage:Image[](M:Material, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
+			Local T:= M.GetTexture("ColorTexture")
+			
+			Local Count:= Min((T.Width / FrameWidth) + (T.Height / FrameHeight), FrameCount)
 			
 			Local Output:= New Image[Count]
 			
-			For Local Entry:= 0 Until Count ' Output.Length()
+			For Local Entry:= 0 Until Count ' Output.Length
 				Local VPos:Int = (Entry*FrameWidth)
 				
-				Output[Entry] = New Image(I, (VPos Mod I.Width), ((VPos / I.Width) * FrameHeight), FrameWidth, FrameHeight, HandleX, HandleY)
+				Output[Entry] = New Image(M, (VPos Mod T.Width), ((VPos / T.Width) * FrameHeight), FrameWidth, FrameHeight, HandleX, HandleY)
 			Next
 			
 			Return Output
@@ -1198,32 +1202,45 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Please keep in mind Mojo's behavior regarding multi-frame "grabbing".
 	#End
 	
-	Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags)
-		' Check for errors:
-		
-		' Check if we have an internal reference to "grab" from:
-		If (Self.Reference = Null) Then
-			Return Null
-		Endif
-		
-		#If RESOURCES_SAFE
-			If (Self.FrameCount > 1) Then
-				Return Null
+	#If Not RESOURCES_MOJO2
+		Method Grab:Image(X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags)
+	#Else
+		Method Grab:Image[](X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags)
+	#End
+			' Check for errors:
+			
+			' Check if we have an internal reference to "grab" from:
+			If (Not ReferenceAvail) Then
+				Return NilRef
 			Endif
-		#End
-		
-		' Make sure we can "share" the internal reference:
-		If (Not Share()) Then
-			Return Null
-		Endif
-		
-		' Use Mojo to "grab" from the internal reference.
-		Return Self.Reference.GrabImage(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)
-	End
+			
+			#If RESOURCES_SAFE
+				If (Self.FrameCount > 1) Then
+					Return NilRef
+				Endif
+			#End
+			
+			' Make sure we can "share" the internal reference:
+			If (Not Share()) Then
+				Return NilRef
+			Endif
+			
+			' Use Mojo to "grab" from the internal reference:
+			#If Not RESOURCES_MOJO2
+				Return Self.Reference.GrabImage(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)
+			#Else
+				'Function GrabImage:Image[](M:Material, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
+				Return GrabImage(Self.Reference[0], X, Y, FrameWidth, FrameHeight, FrameCount, Flags) ' Self.Reference[0].Material
+			#End
+		End
 	
-	Method Grab:Image(X:Int=0, Y:Int=0)
-		Return Grab(X, Y, Self.FrameWidth, Self.FrameHeight, Self.FrameCount, Self.Flags)
-	End
+	#If Not RESOURCES_MOJO2
+		Method Grab:Image(X:Int=0, Y:Int=0)
+	#Else
+		Method Grab:Image[](X:Int=0, Y:Int=0)
+	#End
+			Return Grab(X, Y, Self.FrameWidth, Self.FrameHeight, Self.FrameCount, Self.Flags)
+		End
 	
 	' This is used for "atlas" optimization purposes.
 	' By default, 'ImageEntry' objects do not have positions.
@@ -1369,6 +1386,18 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			Return Super.IsReady() And Not WaitingForAsynchronousReference
 		End
 	#End
+	
+	Method Frames:Int() Property
+		#If Not RESOURCES_MOJO2
+			If (Reference = Null) Then
+				Return 0
+			Endif
+			
+			Return Reference.Frames()
+		#Else
+			Return Reference.Length()
+		#End
+	End
 
 	' Fields (Public):
 	Field Path:String
@@ -1533,38 +1562,46 @@ Class AtlasImageEntry Extends ImageEntry
 		This behavior can be unwanted, and because of that, 'ForceAtlasCreation' defaults to 'False'.
 	#End
 	
-	Method GrabFromAtlas:Image(AtlasManager:AtlasImageManager, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, CheckInternal:Bool=True, ForceAtlasCreation:Bool=False)
-		' Check if we can use the standard implementation of 'Grab':
-		If (CheckInternal And (Self.Reference <> Null And Self.Reference.Frames() = 1)) Then
-			Return Grab(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)
-		Endif
-		
-		' Check for errors:
-		If (AtlasManager = Null) Then
-			Return Null
-		Endif
-		
-		' Local variable(s):
-		Local Atlas:Image
-		
-		' Look for a valid "atlas" to "grab" from:
-		If (Not ForceAtlasCreation) Then
-			' This will fail if a valid "atlas" doesn't already exist.
-			Atlas = AtlasManager.LookupAtlas(Self)
-		Else
-			' This isn't the best choice, but it works.
-			' Basically, if an "atlas" can't be found,
-			' this will force one to be generated/loaded.
-			Atlas = AtlasManager.GenerateAtlas(Self)
-		Endif
-		
-		If (Atlas = Null) Then
-			Return Null
-		Endif
-		
-		' We found an "atlas" to work with, "grab" a portion of it.
-		Return Atlas.GrabImage(Self.X+X, Self.Y+Y, FrameWidth, FrameHeight, FrameCount, Flags)
-	End
+	#If Not RESOURCES_MOJO2
+		Method GrabFromAtlas:Image(AtlasManager:AtlasImageManager, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, CheckInternal:Bool=True, ForceAtlasCreation:Bool=False)
+	#Else
+		Method GrabFromAtlas:Image[](AtlasManager:AtlasImageManager, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, CheckInternal:Bool=True, ForceAtlasCreation:Bool=False)
+	#End
+			' Check if we can use the standard implementation of 'Grab':
+			If (CheckInternal And Frames = 1) Then
+				Return Grab(X, Y, FrameWidth, FrameHeight, FrameCount, Flags)
+			Endif
+			
+			' Check for errors:
+			If (AtlasManager = Null) Then
+				Return NilRef
+			Endif
+			
+			' Local variable(s):
+			Local Atlas:Image
+			
+			' Look for a valid "atlas" to "grab" from:
+			If (Not ForceAtlasCreation) Then
+				' This will fail if a valid "atlas" doesn't already exist.
+				Atlas = AtlasManager.LookupAtlas(Self)
+			Else
+				' This isn't the best choice, but it works.
+				' Basically, if an "atlas" can't be found,
+				' this will force one to be generated/loaded.
+				Atlas = AtlasManager.GenerateAtlas(Self)
+			Endif
+			
+			If (Atlas = Null) Then
+				Return NilRef
+			Endif
+			
+			' We found an "atlas" to work with, "grab" a portion of it.
+			#If Not RESOURCES_MOJO2
+				Return Atlas.GrabImage(Self.X+X, Self.Y+Y, FrameWidth, FrameHeight, FrameCount, Flags)
+			#Else
+				Return GrabImage(Atlas, Self.X+X, Self.Y+Y, FrameWidth, FrameHeight, FrameCount, Flags)
+			#End
+		End
 	
 	Method CheckPosition:Bool(X:Int=0, Y:Int=0)
 		Return (Self.X = X) And (Self.Y = Y)
