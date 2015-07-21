@@ -891,7 +891,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			For Local Entry:= 0 Until Count ' Output.Length
 				Local VPos:Int = (Entry*FrameWidth)
 				
-				Output[Entry] = New Image(M, (VPos Mod T.Width), ((VPos / T.Width) * FrameHeight), FrameWidth, FrameHeight, HandleX, HandleY)
+				Output[Entry] = New Image(M, (VPos Mod T.Width), ((VPos / T.Width) * FrameWidth), FrameWidth, FrameHeight, HandleX, HandleY) ' * FrameHeight
 			Next
 			
 			Return Output
@@ -1175,6 +1175,9 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		If (Self.FrameWidth = 0 And Self.FrameHeight = 0) Then
 			FrameWidth = (Atlas.Width()-X) / Self.FrameCount
 			FrameHeight = (Atlas.Height()-Y)
+		Else
+			FrameWidth = Self.FrameWidth
+			FrameHeight = Self.FrameHeight
 		Endif
 		
 		#If Not RESOURCES_MOJO2
@@ -1407,6 +1410,10 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	Field FrameCount:Int
 	
 	Field Flags:Int
+	
+	#If RESOURCES_MOJO2
+		Field HandleX:Float, HandleY:Float
+	#End
 	
 	' Fields (Private):
 	Private
