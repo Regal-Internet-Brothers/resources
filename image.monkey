@@ -188,7 +188,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		If (LookForSimilar) Then
 			' Look for a compatible object:
 			For Local I:= Eachin Container ' Images ' Self
-				If (I.Equals(Entry, CheckReference)) Then
+				If (I.Equals(Entry, CheckReference) And I.CheckPosition(Entry.X, Entry.Y)) Then
 					Return I
 				Endif
 			Next
@@ -233,7 +233,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 	' This routine will retrieve an image-entry based on the input given.
 	Method Load:ImageEntry(Path:String, FrameCount:Int=1, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
-			If (I.Equals(Path, FrameCount, Flags)) Then
+			If (I.Equals(Path, FrameCount, Flags) And I.CheckPosition(0, 0)) Then
 				I.ExecuteCallbackSelectively(Callback)
 				
 				Return I
@@ -268,7 +268,7 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 	
 	Method Load:ImageEntry(Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
-			If (I.Equals(Path, FrameCount, Flags, FrameWidth, FrameHeight)) Then
+			If (I.Equals(Path, FrameCount, Flags, FrameWidth, FrameHeight) And I.CheckPosition(0, 0)) Then
 				I.ExecuteCallbackSelectively(Callback)
 				
 				Return I
@@ -301,9 +301,10 @@ Class ImageManager Extends AssetEntryManager<ImageEntry>
 		Return Entry
 	End
 	
+	' This command is not recommended.
 	Method Create:ImageEntry(FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, Callback:ImageEntryRecipient=Null, AddInternally:Bool=True, CareAboutInternalAdd:Bool=True)
 		For Local I:= Eachin Container ' Images ' Self
-			If (I.Equals(FrameWidth, FrameHeight, FrameCount, Flags)) Then
+			If (I.Equals(FrameWidth, FrameHeight, FrameCount, Flags) And I.CheckPosition(0, 0)) Then
 				I.ExecuteCallbackSelectively(Callback)
 				
 				Return I
@@ -511,7 +512,7 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 			' Ensure that the object in question is the equal, and it's located at the same place on the atlas:
 			If (I.Equals(Path, FrameCount, Flags, FrameWidth, FrameHeight) And I.CheckPosition(X, Y)) Then
 				I.ExecuteCallbackSelectively(Callback)
-			
+				
 				Return I
 			Endif
 		Next
@@ -753,11 +754,11 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 					Local Atlas:= LookupAtlas(Entry)
 					
 					If (Atlas <> Null) Then
-						Return AssignReference(Entry, True, Atlas, CallUpOnFailure)
+						Return AssignReference(Entry, True, Atlas, CallUpOnFailure, Entry.X, Entry.Y)
 					Else
 						#If RESOURCES_SAFE
 							If (Not Contains(Entry)) Then
-								Return AssignReference(Entry, True, CallUpOnFailure)
+								Return AssignReference(Entry, True, CallUpOnFailure, Entry.X, Entry.Y)
 							Else
 						#End
 								' Generate the "atlas" for this 'ImageEntry' object asynchronously.
@@ -774,7 +775,7 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 				
 				Return Entry.Reference
 			#Else
-				Return AssignReference(Entry, ShouldLoadFromDisk, CallUpOnFailure)
+				Return AssignReference(Entry, ShouldLoadFromDisk, CallUpOnFailure, Entry.X, Entry.Y)
 			#End
 		End
 	
@@ -1401,7 +1402,23 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			Return Reference.Length()
 		#End
 	End
-
+	
+	Method X:Int() Property
+		Return 0
+	End
+	
+	Method Y:Int() Property
+		Return 0
+	End
+	
+	Method X:Void(Value:Int) Property
+		Return
+	End
+	
+	Method Y:Void(Value:Int) Property
+		Return
+	End
+	
 	' Fields (Public):
 	Field Path:String
 	
@@ -1619,8 +1636,32 @@ Class AtlasImageEntry Extends ImageEntry
 		Return Self.CanBePooled And Super.CanDeallocate()
 	End
 	
-	' Fields:
-	Field X:Int, Y:Int
+	Method X:Int() Property Final
+		Return Self._X
+	End
+	
+	Method Y:Int() Property Final
+		Return Self._Y
+	End
+	
+	Method X:Void(Value:Int) Property Final
+		Self._X = Value
+		
+		Return
+	End
+	
+	Method Y:Void(Value:Int) Property Final
+		Self._Y = Value
+		
+		Return
+	End
+	
+	' Fields (Protected):
+	Protected
+	
+	Field _X:Int, _Y:Int
+	
+	Public
 	
 	' Booleans / Flags:
 	Field CanBePooled:Bool
