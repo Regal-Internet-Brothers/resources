@@ -754,11 +754,11 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 					Local Atlas:= LookupAtlas(Entry)
 					
 					If (Atlas <> Null) Then
-						Return AssignReference(Entry, True, Atlas, CallUpOnFailure, Entry.X, Entry.Y)
+						Return AssignReference(Entry, True, Atlas, CallUpOnFailure)
 					Else
 						#If RESOURCES_SAFE
 							If (Not Contains(Entry)) Then
-								Return AssignReference(Entry, True, CallUpOnFailure, Entry.X, Entry.Y)
+								Return AssignReference(Entry, True, CallUpOnFailure)
 							Else
 						#End
 								' Generate the "atlas" for this 'ImageEntry' object asynchronously.
@@ -775,7 +775,7 @@ Class AtlasImageManager Extends ImageManager Implements ImageReferenceManager
 				
 				Return Entry.Reference
 			#Else
-				Return AssignReference(Entry, ShouldLoadFromDisk, CallUpOnFailure, Entry.X, Entry.Y)
+				Return AssignReference(Entry, ShouldLoadFromDisk, CallUpOnFailure)
 			#End
 		End
 	
@@ -892,7 +892,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			For Local Entry:= 0 Until Count ' Output.Length
 				Local VPos:Int = (Entry*FrameWidth)
 				
-				Output[Entry] = New Image(M, (VPos Mod T.Width), ((VPos / T.Width) * FrameWidth), FrameWidth, FrameHeight, HandleX, HandleY) ' * FrameHeight
+				Output[Entry] = New Image(M, ((X+VPos) Mod T.Width), (((Y+VPos) / T.Width) * FrameWidth), FrameWidth, FrameHeight, HandleX, HandleY) ' * FrameHeight
 			Next
 			
 			Return Output
