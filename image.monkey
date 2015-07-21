@@ -885,14 +885,24 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 		Function GrabImage:Image[](M:Material, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
 			Local T:= M.GetTexture("ColorTexture")
 			
-			Local Count:= Min((T.Width / FrameWidth) + (T.Height / FrameHeight), FrameCount)
+			Local TW:= T.Width
+			Local TH:= T.Height
+			
+			Local Count:= Min((TW / FrameWidth) + (TH / FrameHeight), FrameCount)
 			
 			Local Output:= New Image[Count]
 			
 			For Local Entry:= 0 Until Count ' Output.Length
-				Local VPos:Int = (Entry*FrameWidth)
+				Local VPos:= (Entry*FrameWidth)
+				Local Row:= (VPos / TW)
+				Local IX:= ((X+VPos) Mod TW)
+				Local IY:= (Row * FrameWidth) ' * FrameHeight
 				
-				Output[Entry] = New Image(M, ((X+VPos) Mod T.Width), (((Y+VPos) / T.Width) * FrameWidth), FrameWidth, FrameHeight, HandleX, HandleY) ' * FrameHeight
+				If (Row = 0) Then
+					IY += Y
+				Endif
+				
+				Output[Entry] = New Image(M, IX, IY, FrameWidth, FrameHeight, HandleX, HandleY)
 			Next
 			
 			Return Output
