@@ -874,15 +874,15 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			Return Image.LoadFrames(Path, FrameCount, Padded, HandleX, HandleY, Flags)
 		End
 		
-		Function LoadImage:Image[](Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
-			Return GrabImage(Material.Load(Path, Flags, Null), 0, 0, FrameWidth, FrameHeight, FrameCount, Flags)
+		Function LoadImage:Image[](Path:String, FrameWidth:Int, FrameHeight:Int, FrameCount:Int, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5, PersistentOffset:Bool=True)
+			Return GrabImage(Material.Load(Path, Flags, Null), 0, 0, FrameWidth, FrameHeight, FrameCount, Flags, HandleX, HandleY, PersistentOffset)
 		End
 		
-		Function GrabImage:Image[](I:Image, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
-			Return GrabImage(I.Material, X, Y, FrameWidth, FrameHeight, FrameCount, Flags, HandleX, HandleY)
+		Function GrabImage:Image[](I:Image, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5, PersistentOffset:Bool=True)
+			Return GrabImage(I.Material, X, Y, FrameWidth, FrameHeight, FrameCount, Flags, HandleX, HandleY, PersistentOffset)
 		End
 		
-		Function GrabImage:Image[](M:Material, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
+		Function GrabImage:Image[](M:Material, X:Int, Y:Int, FrameWidth:Int, FrameHeight:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5, PersistentOffset:Bool=True)
 			Local T:= M.GetTexture("ColorTexture")
 			
 			Local TW:= T.Width
@@ -898,7 +898,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 				Local IX:= ((X+VPos) Mod TW)
 				Local IY:= (Row * FrameWidth) ' * FrameHeight
 				
-				If (Row = 0) Then
+				If (PersistentOffset Or Row = 0) Then
 					IY += Y
 				Endif
 				
