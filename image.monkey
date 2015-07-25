@@ -858,12 +858,7 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 	' Global variable(s):
 	Global DefaultFlags:= ImageManager.DefaultFlags
 	
-	' Functions (Public):
-	' Nothing so far.
-	
-	' Functions (Private):
-	Private
-	
+	' Functions:
 	#If RESOURCES_MOJO2
 		' Mojo compatibility layer:
 		Function CreateImage:Image[](Width:Int, Height:Int, FrameCount:Int=1, Flags:Int=DefaultFlags, HandleX:Float=0.5, HandleY:Float=0.5)
@@ -908,8 +903,6 @@ Class ImageEntry Extends ManagedAssetEntry<Image, ImageReferenceManager, ImageEn
 			Return Output
 		End
 	#End
-	
-	Public
 	
 	' Constructor(s) (Public):
 	
