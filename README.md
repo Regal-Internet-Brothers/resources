@@ -12,4 +12,4 @@ This module started as a completely different module which further wrapped the f
 
 Compatibility with the 'mojoemulator' module may be dropped at a later date.
 
-This module is not currently a part of the officially managed modules, [found here](https://github.com/Regal-Internet-Brothers/modules). None of those modules has the right to require this module yet. Experimental functionality that optionally uses this module may be provided by those modules, but not condoned.
+This module is currently a part of the officially managed modules ([found here](https://github.com/Regal-Internet-Brothers/modules)) on a trial basis. None of those modules has the right to require this module yet. Experimental functionality that optionally uses this module may be provided by those modules, but not condoned.
