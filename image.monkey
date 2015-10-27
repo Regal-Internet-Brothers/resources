@@ -11,7 +11,7 @@ Public
 ' Imports:
 
 ' Internal:
-Import resources
+Import resources ' regal.resources
 
 Import assetentrymanager
 
@@ -35,13 +35,13 @@ Import assetentrymanager
 		Public
 	#Else
 		' Public:
-		Import mojoemulator.graphics
+		Import regal.mojoemulator.graphics
 		
 		' Private:
 		Private
 		
 		#If RESOURCES_IMAGE_ASYNC_ENABLED
-			Import mojoemulator.asyncloaders
+			Import regal.mojoemulator.asyncloaders
 		#End
 		
 		Public

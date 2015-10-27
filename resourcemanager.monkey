@@ -6,7 +6,7 @@ Public
 #RESOURCES_RESOURCEMANAGER_PREFER_ATLASES = True
 
 ' Imports:
-Import resources
+Import resources ' regal.resources
 
 Import assetentrymanager
 
