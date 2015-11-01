@@ -1,4 +1,7 @@
 # resources
+
+**Development of this module has been dropped until further notice.**
+
 A module used to manage and re-use loaded resources for [Monkey](https://github.com/blitz-research/monkey)'s [Mojo](http://www.monkey-x.com/docs/html/Modules_mojo.html) and [Mojo 2](http://www.monkey-x.com/Store/mojo2.php) frameworks.
 
 **This module is currently experimental, and may go through major refactoring until considered stable.**
